@@ -1,60 +1,116 @@
-# Virtual Environment
+
+# ==============================
+# Python cache and compiled files
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ==============================
+# Virtual environments
+# ==============================
 venv/
 .venv/
 env/
 ENV/
+virtualenv/
+.conda/
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Uploads - Do not commit user-uploaded financial documents
-uploads/
-
-# Environment variables
+# ==============================
+# Environment variables and secrets
+# ==============================
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+secrets/
+credentials.json
+service-account.json
 
-# Database
+# ==============================
+# Uploaded documents and user data
+# ==============================
+uploads/
+upload/
+uploaded_files/
+user_uploads/
+docx_extracted/
+extracted_files/
+processed_files/
+temp_uploads/
+
+# ==============================
+# Databases and database backups
+# ==============================
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
+*.sqlite-journal
+*.bak
 
-# Flask
-instance/
-.webassets-cache
+# ==============================
+# Logs
+# ==============================
+*.log
+logs/
+log/
 
-# Misc
+# ==============================
+# Temporary files
+# ==============================
+*.tmp
+*.temp
+*.swp
+*.swo
+*.orig
+~*
+
+# ==============================
+# Testing and coverage
+# ==============================
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.nox/
+test-results/
+coverage.xml
 
-# Temporary extraction
-docx_extracted/
+# ==============================
+# IDE and editor settings
+# ==============================
+.vscode/
+.idea/
+*.sublime-workspace
+
+# ==============================
+# Operating system files
+# ==============================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Build and distribution
+# ==============================
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ==============================
+# Jupyter
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# Node dependencies (if applicable)
+# ==============================
+node_modules/
