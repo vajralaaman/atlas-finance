@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Atlas Finance{% endblock %}
+
+{% block content %}
+{% set display_currency = overview.filters.currency or (overview.bank_statements[0].currency if overview.bank_statements else '') or 'INR' %}
+<div class="finance-dashboard">
+    <header class="dashboard-header">
+        <div>
+            <span class="eyebrow">{{ display_currency }} workspace</span>
+            <h1>Dashboard</h1>
+            <p>Overview of your business finances</p>
+        </div>
+        <div class="dashboard-actions">
+            <div class="period-switcher" role="group" aria-label="Date range">
+                <a href="{{ url_for('analytics') }}?month={{ (current_periods|default({})).month }}" class="period-option {% if overview.filters.month == (current_periods|default({})).month %}active{% endif %}">This month</a>
+                <a href="{{ url_for('analytics') }}?date_from={{ (current_periods|default({})).quarter_start }}&date_to={{ (current_periods|default({})).today }}" class="period-option {% if overview.filters.date_from == (current_periods|default({})).quarter_start %}active{% endif %}">This quarter</a>
+                <a href="{{ url_for('analytics') }}?year={{ (current_periods|default({})).year }}" class="period-option {% if overview.filters.year == (current_periods|default({})).year %}active{% endif %}">This year</a>
+                <button type="button" class="icon-button" id="filter-toggle" aria-expanded="false" aria-controls="dashboard-filters" title="Toggle Filters">⚙</button>
+            </div>
+            <div class="export-dropdown">
+                <button type="button" class="btn btn-secondary export-btn" id="exportDropdownBtn" aria-expanded="false" title="Export Financial Report">
+                    📥 Export ▾
+                </button>
+                <div class="export-menu" id="exportMenu" hidden>
+                    <a href="{{ url_for('export_analytics', format='excel', **overview.filters) }}" class="export-item">
+                        <span class="export-icon">📊</span>
+                        <div class="export-item-text">
+                            <strong>Excel Workbook (.xlsx)</strong>
+                            <small>Audit-ready multi-tab financial report</small>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('export_analytics', format='csv', **overview.filters) }}" class="export-item">
+                        <span class="export-icon">📄</span>
+                        <div class="export-item-text">
+                            <strong>CSV Ledger (.csv)</strong>
+                            <small>Raw transaction and invoice records</small>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('export_analytics', format='tally', **overview.filters) }}" class="export-item">
+                        <span class="export-icon">📑</span>
+                        <div class="export-item-text">
+                            <strong>Tally Prime XML (.xml)</strong>
+                            <small>Import directly into Tally Prime / ERP 9</small>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('export_analytics', format='quickbooks', **overview.filters) }}" class="export-item">
+                        <span class="export-icon">💼</span>
+                        <div class="export-item-text">
+                            <strong>QuickBooks CSV (.csv)</strong>
+                            <small>Batch Enter Transactions format</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <a class="btn btn-primary upload-button" href="{{ url_for('index') }}">＋ Upload</a>
+        </div>
+    </header>
+
+    <form id="dashboard-filters" class="dashboard-filters" method="get" action="{{ url_for('analytics') }}" hidden>
+        <label>From<input type="date" name="date_from" value="{{ overview.filters.date_from }}"></label>
+        <label>To<input type="date" name="date_to" value="{{ overview.filters.date_to }}"></label>
+        <label>Month<input type="month" name="month" value="{{ overview.filters.month }}"></label>
+        <label>Year
+            <select name="year">
+                <option value="">All years</option>
+                {% for year in filter_options.years %}
+                <option value="{{ year }}" {% if overview.filters.year == year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Type
+            <select name="document_type">
+                <option value="">All records</option>
+                <option value="bank_statement" {% if overview.filters.document_type == 'bank_statement' %}selected{% endif %}>Bank statements</option>
+                <option value="invoice" {% if overview.filters.document_type == 'invoice' %}selected{% endif %}>Invoices</option>
+            </select>
+        </label>
+        <label>Currency
+            <select name="currency">
+                <option value="">All currencies</option>
+                {% for currency in filter_options.currencies %}
+                <option value="{{ currency }}" {% if overview.filters.currency == currency %}selected{% endif %}>{{ currency }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="filter-actions">
+            <button class="btn btn-primary" type="submit">Apply</button>
+            <a class="btn btn-secondary" href="{{ url_for('analytics') }}">Reset</a>
+        </div>
+    </form>
+
+    {% if overview.missing_data_alert and overview.missing_data_alert.has_missing %}
+    <div class="missing-data-alert" role="alert" id="missingDataBanner">
+        <div class="alert-icon-wrap">⚠️</div>
+        <div class="alert-content">
+            <div class="alert-header-row">
+                <strong class="alert-title">Data Gap Alert: Missing Period Detected</strong>
+                <span class="missing-count-pill">{{ overview.missing_data_alert.missing_count }} month{% if overview.missing_data_alert.missing_count > 1 %}s{% endif %} missing</span>
+            </div>
+            <p class="alert-message">{{ overview.missing_data_alert.message }}</p>
+            <div class="missing-chips">
+                <span class="missing-chips-label">Missing Duration:</span>
+                {% for label in overview.missing_data_alert.missing_months_labels %}
+                <span class="missing-chip">📅 {{ label }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="alert-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="openMissingModalBtn">View Details</button>
+            <a class="btn btn-primary btn-sm" href="{{ url_for('index') }}">＋ Upload Statement</a>
+        </div>
+    </div>
+
+    <!-- Missing Data Popup Modal -->
+    <div class="missing-modal-overlay" id="missingDataModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="missing-modal-card">
+            <div class="missing-modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-icon-badge">⚠️</span>
+                    <div>
+                        <h3 id="modalTitle">Missing Financial Period Alert</h3>
+                        <p class="modal-subtitle">Continuous timeline check across selected duration</p>
+                    </div>
+                </div>
+                <button type="button" class="missing-modal-close" id="closeModalCross" aria-label="Close alert popup">&times;</button>
+            </div>
+            <div class="missing-modal-body">
+                <p class="modal-lead">
+                    You filtered financial records from <strong>{{ overview.missing_data_alert.start_period }}</strong> to <strong>{{ overview.missing_data_alert.end_period }}</strong>. Our analyzer identified that financial data is missing in the middle of this selected duration:
+                </p>
+                <div class="missing-list-box">
+                    <span class="missing-list-label">Missing Statements / Months:</span>
+                    <div class="missing-items-grid">
+                        {% for label in overview.missing_data_alert.missing_months_labels %}
+                        <div class="missing-item-row">
+                            <span class="missing-item-cal">📅</span>
+                            <div class="missing-item-text">
+                                <strong>{{ label }}</strong>
+                                <small>No bank statements or invoices recorded</small>
+                            </div>
+                            <span class="status-badge status-warning">Missing Data</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="missing-modal-notice">
+                    <span class="notice-icon">💡</span>
+                    <p><strong>Business Impact:</strong> Monthly revenue/expense trends and cash flow totals may be incomplete without the statements for the missing period above.</p>
+                </div>
+            </div>
+            <div class="missing-modal-footer">
+                <button type="button" class="btn btn-secondary" id="dismissModalBtn">Continue to Dashboard</button>
+                <a class="btn btn-primary" href="{{ url_for('index') }}">＋ Upload Missing Statement</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not overview.has_data %}
+    <section class="empty-state dashboard-empty">
+        <span class="empty-icon">＋</span>
+        <h2>Your financial picture starts here</h2>
+        <p>Upload a bank statement or supplier invoice to populate your dashboard with stored records.</p>
+        <a class="btn btn-primary" href="{{ url_for('index') }}">Upload documents</a>
+    </section>
+    {% endif %}
+
+    <section class="summary-grid" aria-label="Financial summary">
+        <article class="summary-card revenue">
+            <div class="summary-card-head">
+                <span>Transaction income</span>
+                <span class="summary-icon">↗</span>
+            </div>
+            <strong>{{ overview.total_income|currency }}</strong>
+            <small>{{ overview.income_transaction_count }} credit transactions</small>
+        </article>
+        <article class="summary-card payables">
+            <div class="summary-card-head">
+                <span>Payables</span>
+                <span class="summary-icon">↘</span>
+            </div>
+            <strong>{{ overview.unmatched_amount|currency }}</strong>
+            <small>{{ overview.pending_invoices }} pending supplier invoices</small>
+        </article>
+        <article class="summary-card expenses">
+            <div class="summary-card-head">
+                <span>Expenses paid</span>
+                <span class="summary-icon">−</span>
+            </div>
+            <strong>{{ overview.total_expenses|currency }}</strong>
+            <small>{{ overview.expense_transaction_count }} bank debit transactions</small>
+        </article>
+        <article class="summary-card taxes">
+            <div class="summary-card-head">
+                <span>Recorded taxes</span>
+                <span class="summary-icon">%</span>
+            </div>
+            <strong>{{ overview.total_tax|currency }}</strong>
+            <small>Tax recorded on stored invoices</small>
+        </article>
+    </section>
+
+    <section class="charts-grid" aria-label="Financial charts">
+        <article class="dashboard-panel chart-panel-wide">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Cash movement</span>
+                    <h2>Revenue vs expenses</h2>
+                </div>
+                <span class="legend-note">Monthly</span>
+            </div>
+            <div class="chart-box">
+                <canvas id="incomeExpenseChart"></canvas>
+                <p class="chart-empty" data-for="incomeExpenseChart">No monthly transaction data.</p>
+            </div>
+        </article>
+        <article class="dashboard-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Invoice health</span>
+                    <h2>Invoice status</h2>
+                </div>
+            </div>
+            <div class="chart-box doughnut-box">
+                <canvas id="invoiceChart"></canvas>
+                <p class="chart-empty" data-for="invoiceChart">No invoice data.</p>
+            </div>
+        </article>
+        <article class="dashboard-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Where it goes</span>
+                    <h2>Expense categories</h2>
+                </div>
+            </div>
+            <div class="chart-box doughnut-box">
+                <canvas id="categoryChart"></canvas>
+                <p class="chart-empty" data-for="categoryChart">No categorized expenses.</p>
+            </div>
+        </article>
+    </section>
+
+    <section class="record-grid">
+        <article class="dashboard-panel record-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Supplier obligations</span>
+                    <h2>Recent invoices</h2>
+                </div>
+                <a class="text-link" href="{{ url_for('documents', type='invoice') }}">View all →</a>
+            </div>
+            {% if invoices %}
+            <div class="record-list">
+                {% for invoice in invoices[:6] %}
+                <a class="record-row" href="{{ url_for('document_detail', document_id=invoice.document_id) }}">
+                    <span class="record-main">
+                        <strong>{{ invoice.invoice_number or 'Invoice without number' }}</strong>
+                        <small>{{ invoice.vendor_name or 'Vendor unavailable' }} · {{ invoice.invoice_date or 'Date unavailable' }}</small>
+                    </span>
+                    <span class="record-amount">
+                        {{ invoice.total_amount|currency }}
+                        <small>{{ invoice.currency or display_currency }}</small>
+                    </span>
+                    <span class="status-badge {% if invoice.reconciliation_status == 'PAID' %}status-success{% else %}status-warning{% endif %}">
+                        {{ 'Paid' if invoice.reconciliation_status == 'PAID' else 'Pending' }}
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="panel-empty">No invoices in this view.</p>
+            {% endif %}
+        </article>
+
+        <article class="dashboard-panel record-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">Bank activity</span>
+                    <h2>Recent expenses</h2>
+                </div>
+                <a class="text-link" href="{{ url_for('documents', type='bank_statement') }}">View all →</a>
+            </div>
+            {% if overview.recent_expenses %}
+            <div class="record-list">
+                {% for expense in overview.recent_expenses %}
+                <div class="record-row">
+                    <span class="expense-dot"></span>
+                    <span class="record-main">
+                        <strong>{{ expense.description or 'Unlabeled transaction' }}</strong>
+                        <small>{{ expense.category }} · {{ expense.transaction_date or 'Date unavailable' }}</small>
+                    </span>
+                    <span class="record-amount expense-amount">
+                        −{{ expense.amount|currency }}
+                        <small>{{ expense.currency or display_currency }}</small>
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="panel-empty">No expenses in this view.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    {% if overview.risk_alerts %}
+    <section class="dashboard-panel risk-panel" aria-label="Risk & Audit Alerts">
+        <div class="panel-heading">
+            <div>
+                <span class="eyebrow risk-eyebrow">Automated Audit & Fraud Signals</span>
+                <h2>Risk & Anomaly Detection</h2>
+            </div>
+            <span class="risk-count-badge">{{ overview.risk_alerts|length }} Active Alert{% if overview.risk_alerts|length > 1 %}s{% endif %}</span>
+        </div>
+        <div class="risk-alerts-grid">
+            {% for alert in overview.risk_alerts %}
+            <div class="risk-card risk-card-{{ alert.severity }}">
+                <span class="risk-card-icon">{{ alert.icon }}</span>
+                <div class="risk-card-content">
+                    <strong>{{ alert.title }}</strong>
+                    <p>{{ alert.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if insights %}
+    <section class="dashboard-panel insights-panel">
+        <div class="panel-heading">
+            <div>
+                <span class="eyebrow">Stored data signals</span>
+                <h2>Financial insights</h2>
+            </div>
+        </div>
+        <ul class="insights-list">
+            {% for insight in insights %}
+            <li>{{ insight }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="analytics-data" type="application/json">{{ overview|tojson }}</script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

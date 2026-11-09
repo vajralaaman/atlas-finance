@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Security & Two-Factor Authentication | Atlas Finance{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="header-breadcrumbs">Workspace / Settings / Security</div>
+        <h1 class="page-title">Account Security & Two-Factor Authentication</h1>
+        <p class="page-subtitle">Protect your financial documents and records with industry-standard RFC-6238 time-based verification</p>
+    </div>
+</div>
+
+<div class="analytics-layout" style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem;">
+    <!-- Account Information Card -->
+    <div class="card" style="padding: 1.5rem;">
+        <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.75rem; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+            <span>👤</span> Account Profile
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div>
+                <small style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Full Name</small>
+                <div style="font-weight: 600; color: #0f172a;">{{ user.full_name or 'Workspace User' }}</div>
+            </div>
+            <div>
+                <small style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Email Address</small>
+                <div style="font-weight: 600; color: #0f172a;">{{ user.email }}</div>
+            </div>
+            <div>
+                <small style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Assigned Role</small>
+                <div><span class="user-role-badge role-{{ user.role }}">{{ user.role|title }}</span></div>
+            </div>
+            <div>
+                <small style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">2FA Status</small>
+                <div>
+                    {% if totp_enabled %}
+                    <span style="display: inline-flex; align-items: center; gap: 0.25rem; color: #16a34a; font-weight: 700; font-size: 0.85rem;">
+                        ● Active (Protected)
+                    </span>
+                    {% else %}
+                    <span style="display: inline-flex; align-items: center; gap: 0.25rem; color: #e11d48; font-weight: 700; font-size: 0.85rem;">
+                        ○ Inactive (Vulnerable)
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2FA Management Card -->
+    {% if totp_enabled %}
+    <div class="card" style="padding: 1.75rem; border-left: 4px solid #16a34a;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🛡️</span> Two-Factor Authentication is Active
+                </h3>
+                <p style="color: #475569; font-size: 0.95rem; line-height: 1.5; max-width: 600px;">
+                    Your account requires both your password and a 6-digit verification code from Google Authenticator, Microsoft Authenticator, or Apple Passwords to sign in.
+                </p>
+            </div>
+            <form method="post" action="{{ url_for('disable_2fa') }}" onsubmit="return confirm('Are you sure you want to disable Two-Factor Authentication? Your account will only be protected by password.');">
+                <button type="submit" class="btn btn-secondary" style="color: #e11d48; border-color: #fecdd3; background: #fff1f2;">
+                    Disable 2FA
+                </button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="padding: 1.75rem; border-left: 4px solid #0284c7;">
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📱</span> Set Up Two-Factor Authentication (2FA)
+        </h3>
+        <p style="color: #475569; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Add an extra layer of protection to your financial ledger. Scan the QR code below using any standard authenticator app (e.g. <strong>Google Authenticator</strong>, <strong>Microsoft Authenticator</strong>, <strong>Apple Keychain</strong>, or <strong>Authy</strong>).
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; align-items: start;">
+            <!-- Left: QR Code & Manual Secret -->
+            <div style="text-align: center; background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="font-size: 0.95rem; font-weight: 600; color: #1e293b; margin-bottom: 1rem;">Step 1: Scan QR Code</h4>
+                {% if qr_data_uri %}
+                <img src="{{ qr_data_uri }}" alt="TOTP QR Code" style="width: 180px; height: 180px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                {% endif %}
+                <div style="margin-top: 1rem;">
+                    <small style="color: #64748b; display: block; margin-bottom: 0.25rem;">Or enter secret key manually:</small>
+                    <code id="secretKeyText" style="display: inline-block; background: #ffffff; padding: 0.35rem 0.65rem; border-radius: 4px; border: 1px solid #cbd5e1; font-weight: 700; color: #0369a1; letter-spacing: 0.05em; font-size: 0.85rem;">{{ setup_secret }}</code>
+                    <button type="button" class="btn btn-sm btn-secondary" id="copyKeyBtn" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.75rem;">Copy</button>
+                </div>
+            </div>
+
+            <!-- Right: Verification Form -->
+            <div style="background: #ffffff; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="font-size: 0.95rem; font-weight: 600; color: #1e293b; margin-bottom: 1rem;">Step 2: Enter 6-digit Code to Confirm</h4>
+                
+                <form method="post" action="{{ url_for('enable_2fa') }}">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="otp_code" style="font-weight: 600; font-size: 0.875rem;">Authentication Code</label>
+                        <input type="text" id="otp_code" name="otp_code" maxlength="6" pattern="[0-9]{6}" required 
+                               placeholder="123456" autocomplete="one-time-code"
+                               style="width: 100%; padding: 0.65rem; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.25em; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600;">
+                        Verify & Enable 2FA
+                    </button>
+
+                    <!-- Evaluation Helper -->
+                    {% if current_demo_code %}
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 0.8rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #166534; font-weight: 600;">Demo / Review Code:</span>
+                            <button type="button" class="btn-fill-demo" id="fillSetupOtpBtn" style="padding: 2px 8px; font-size: 0.75rem;">Auto-fill</button>
+                        </div>
+                        <div style="color: #15803d; font-family: monospace; font-size: 0.95rem; margin-top: 4px; font-weight: 700;">{{ current_demo_code }}</div>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copyKeyBtn');
+        const keyText = document.getElementById('secretKeyText');
+        if (copyBtn && keyText) {
+            copyBtn.addEventListener('click', function() {
+                navigator.clipboard.writeText(keyText.innerText.trim()).then(function() {
+                    copyBtn.innerText = 'Copied!';
+                    setTimeout(() => { copyBtn.innerText = 'Copy'; }, 2000);
+                });
+            });
+        }
+
+        const fillSetupOtpBtn = document.getElementById('fillSetupOtpBtn');
+        const otpInput = document.getElementById('otp_code');
+        if (fillSetupOtpBtn && otpInput) {
+            fillSetupOtpBtn.addEventListener('click', function() {
+                otpInput.value = '{{ current_demo_code }}';
+                otpInput.focus();
+            });
+        }
+    });
+</script>
+{% endblock %}

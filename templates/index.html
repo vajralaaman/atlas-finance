@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Upload - Atlas Finance{% endblock %}
+
+{% block content %}
+<div class="upload-section shop-upload">
+    <div class="upload-header">
+        <span class="eyebrow">Your shop's back office</span>
+        <h2>Turn paperwork into a clear business picture.</h2>
+        <p class="description">Upload a bank statement or supplier invoice. Atlas Finance extracts the transactions, totals, balances, and payment status for you.</p>
+        <span class="supported-formats">PDF only &nbsp;|&nbsp; Bank statements &nbsp;|&nbsp; Supplier invoices</span>
+    </div>
+
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone-content">
+                <div class="drop-zone-icon">+</div>
+                <h3>Drop your shop documents here</h3>
+                <p>or click to choose PDF files from your computer</p>
+            </div>
+            <input type="file" id="file-input" name="files" multiple accept=".pdf" style="display: none;">
+        </div>
+
+        <div id="file-list-container" class="file-list-container" style="display: none;">
+            <h3>Selected Documents (<span id="file-count">0</span>)</h3>
+            <ul id="file-list" class="file-list"></ul>
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary" id="submit-btn">Process & Store Documents</button>
+                <button type="button" class="btn btn-secondary" id="clear-btn">Clear All</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="upload-outcomes">
+        <div><span class="outcome-number">01</span><strong>Upload once</strong><p>Statements and invoices stay organized in your archive.</p></div>
+        <div><span class="outcome-number">02</span><strong>See every transaction</strong><p>Income, spending, categories, and balances are extracted.</p></div>
+        <div><span class="outcome-number">03</span><strong>Know what is due</strong><p>Invoice totals are matched against bank payments.</p></div>
+    </div>
+
+    <div id="loading" class="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Extracting text, classifying documents, and storing in database...</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Documents Archive - Atlas Finance{% endblock %}
+
+{% block content %}
+<div class="results-page">
+    <div class="results-header">
+        <h2>Stored Financial Documents</h2>
+        <p>Verified records persisted in SQLite database.</p>
+    </div>
+
+    <div class="document-toolbar">
+        <div class="document-filters">
+            <a class="btn btn-sm {% if not document_type %}btn-primary{% else %}btn-secondary{% endif %}" href="{{ url_for('documents', q=query) }}">All documents</a>
+            <a class="btn btn-sm {% if document_type == 'invoice' %}btn-primary{% else %}btn-secondary{% endif %}" href="{{ url_for('documents', type='invoice', q=query) }}">Invoices</a>
+            <a class="btn btn-sm {% if document_type == 'bank_statement' %}btn-primary{% else %}btn-secondary{% endif %}" href="{{ url_for('documents', type='bank_statement', q=query) }}">Bank statements</a>
+        </div>
+        <div class="document-actions">
+            <button class="btn btn-secondary btn-sm" type="button" id="select-documents-btn">Select documents</button>
+            <form method="post" action="{{ url_for('clear_documents_route') }}" onsubmit="return confirm('Clear all stored documents? This cannot be undone.');">
+                <button class="btn btn-danger btn-sm" type="submit">Clear all</button>
+            </form>
+        </div>
+    </div>
+
+    <form class="document-search" method="get" action="{{ url_for('documents') }}">
+        {% if document_type %}<input type="hidden" name="type" value="{{ document_type }}">{% endif %}
+        <div class="document-search-controls">
+            <input name="q" type="search" value="{{ query }}" placeholder="Search by filename, vendor, bank, description, or amount...">
+            <button class="btn btn-primary" type="submit">Search</button>
+            {% if query %}
+            <a class="btn btn-secondary" href="{{ url_for('documents', type=document_type) }}">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if documents %}
+    <form id="selected-documents-form" method="post" action="{{ url_for('delete_selected_documents_route') }}" onsubmit="return confirm('Remove the selected documents?');"></form>
+    <div class="documents-table-wrapper">
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th class="selection-column" hidden><input type="checkbox" id="select-all-documents" aria-label="Select all documents"></th>
+                    <th>Filename</th>
+                    <th>Type</th>
+                    <th>Details</th>
+                    <th>Document Date</th>
+                    <th>Stored Value</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td class="selection-column" hidden><input type="checkbox" form="selected-documents-form" name="document_ids" value="{{ doc.id }}" aria-label="Select {{ doc.filename }}"></td>
+                    <td><strong>{{ doc.filename }}</strong></td>
+                    <td><span class="document-type-pill">{{ doc.document_type|replace('_', ' ')|title }}</span></td>
+                    <td>{% if doc.document_type == 'invoice' %}{{ doc.vendor_name or 'Invoice vendor unavailable' }}{% elif doc.document_type == 'bank_statement' %}{{ doc.bank_name or 'Bank name unavailable' }}{% else %}Uploaded document{% endif %}</td>
+                    <td>{% if doc.document_type == 'invoice' %}{{ doc.invoice_date or doc.upload_date }}{% elif doc.document_type == 'bank_statement' %}{{ doc.statement_start_date or doc.upload_date }}{% else %}{{ doc.upload_date }}{% endif %}</td>
+                    <td>{% if doc.document_type == 'invoice' and doc.invoice_total is not none %}Invoice: ₹{{ "{:,.2f}".format(doc.invoice_total) }}{% elif doc.document_type == 'bank_statement' and doc.closing_balance is not none %}Closing balance: ₹{{ "{:,.2f}".format(doc.closing_balance) }}{% else %}Available in document{% endif %}</td>
+                    <td>
+                        <a href="{{ url_for('document_detail', document_id=doc.id) }}" class="btn btn-primary btn-sm">View</a>
+                        <form method="post" action="{{ url_for('delete_document_route', document_id=doc.id) }}" onsubmit="return confirm('Remove this document from stored data?');" style="display: inline;">
+                            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="selected-documents-actions" id="selected-documents-actions" hidden>
+        <button class="btn btn-danger btn-sm" form="selected-documents-form" type="submit">Remove selected</button>
+    </div>
+    {% elif query %}
+    <div class="info-box"><p>No documents matched your search term: <strong>"{{ query }}"</strong></p></div>
+    {% else %}
+    <div class="info-box"><p>No financial documents have been stored yet.</p></div>
+    {% endif %}
+
+    <div class="results-actions">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Upload Documents</a>
+        <a href="{{ url_for('analytics') }}" class="btn btn-primary">Analytics Dashboard</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (() => {
+        const toggle = document.getElementById('select-documents-btn');
+        const columns = document.querySelectorAll('.selection-column');
+        const selectAll = document.getElementById('select-all-documents');
+        const actions = document.getElementById('selected-documents-actions');
+        const checkboxes = document.querySelectorAll('input[name="document_ids"]');
+        if (!toggle) return;
+        toggle.addEventListener('click', () => {
+            const selecting = toggle.dataset.selecting !== 'true';
+            toggle.dataset.selecting = String(selecting);
+            toggle.textContent = selecting ? 'Cancel selection' : 'Select documents';
+            columns.forEach(column => { column.hidden = !selecting; });
+            actions.hidden = !selecting;
+        });
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach(checkbox => { checkbox.checked = selectAll.checked; });
+            });
+        }
+    })();
+</script>
+{% endblock %}

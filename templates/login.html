@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In | Atlas Finance{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-brand-mark">AF</div>
+            <h2>Sign in to Atlas Finance</h2>
+            <p>Enter your email and password to access your financial workspace</p>
+        </div>
+
+        <form class="auth-form" method="post" action="{{ url_for('login', next=request.args.get('next')) }}">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-with-icon">
+                    <span class="field-icon">✉</span>
+                    <input type="email" id="email" name="email" value="{{ email or '' }}" required autofocus placeholder="name@company.com" autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="password">Password</label>
+                </div>
+                <div class="input-with-icon">
+                    <span class="field-icon">🔒</span>
+                    <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-auth-submit">Sign In</button>
+
+            <!-- Quick Demo Credentials helper -->
+            <div class="demo-account-box">
+                <div class="demo-account-header">
+                    <span class="demo-badge">Quick Demo Access</span>
+                    <button type="button" class="btn-fill-demo" id="fillDemoBtn">Auto-fill Demo</button>
+                </div>
+                <div class="demo-creds">
+                    <span>Email: <code>admin@atlasfinance.com</code></span>
+                    <span>Password: <code>admin123</code></span>
+                </div>
+            </div>
+        </form>
+
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{{ url_for('register') }}">Create an account</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fillDemoBtn = document.getElementById('fillDemoBtn');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        if (fillDemoBtn && emailInput && passwordInput) {
+            fillDemoBtn.addEventListener('click', function() {
+                emailInput.value = 'admin@atlasfinance.com';
+                passwordInput.value = 'admin123';
+                emailInput.focus();
+            });
+        }
+    });
+</script>
+{% endblock %}

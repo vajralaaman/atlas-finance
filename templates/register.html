@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account | Atlas Finance{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-brand-mark">AF</div>
+            <h2>Create Your Account</h2>
+            <p>Set up your email and password to start analyzing financial documents</p>
+        </div>
+
+        <form class="auth-form" method="post" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="full_name">Full Name</label>
+                <div class="input-with-icon">
+                    <span class="field-icon">👤</span>
+                    <input type="text" id="full_name" name="full_name" required placeholder="e.g. Aman Sharma" autocomplete="name">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Work Email</label>
+                <div class="input-with-icon">
+                    <span class="field-icon">✉</span>
+                    <input type="email" id="email" name="email" required placeholder="name@company.com" autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="role">Account Role (Access Level)</label>
+                <div class="input-with-icon">
+                    <span class="field-icon">🛡️</span>
+                    <select id="role" name="role" required class="auth-select">
+                        <option value="admin">Administrator (Full Control & Record Management)</option>
+                        <option value="accountant" selected>Accountant (Upload, Reconcile & Export)</option>
+                        <option value="auditor">Auditor (Read-Only Compliance Review)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-with-icon">
+                    <span class="field-icon">🔒</span>
+                    <input type="password" id="password" name="password" required minlength="6" placeholder="At least 6 characters" autocomplete="new-password">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <div class="input-with-icon">
+                    <span class="field-icon">🔒</span>
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="6" placeholder="Re-enter your password" autocomplete="new-password">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-auth-submit">Create Account</button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

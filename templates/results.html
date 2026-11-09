@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Processing Summary - Atlas Finance{% endblock %}
+
+{% block content %}
+<div class="results-page upload-results">
+    <div class="results-header">
+        <span class="eyebrow">Upload complete</span>
+        <h2>Your documents are ready to review.</h2>
+        <p>We extracted the useful business information and added it to your financial workspace.</p>
+    </div>
+
+    {% if errors %}
+    <div class="error-messages">
+            <h3>Needs your attention</h3>
+        <ul class="error-list">
+            {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if documents %}
+    <div class="documents-table-wrapper">
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Document Type</th>
+                    <th>Status</th>
+                    <th>What was found</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td><strong>{{ doc.filename }}</strong></td>
+                    <td><span class="document-type-pill">{{ doc.document_type }}</span></td>
+                    <td>
+                        {% if doc.is_duplicate %}
+                        <span class="status-badge status-warning">Existing (Duplicate)</span>
+                        {% else %}
+                        <span class="status-badge status-success">Saved Successfully</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if doc.transactions_count %}
+                        {{ doc.transactions_count }} Transactions
+                        {% elif doc.items_count %}
+                        {{ doc.items_count }} Line Items
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('document_detail', document_id=doc.document_id) }}" class="btn btn-primary btn-sm">Inspect</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="info-box"><p>No documents were recently processed.</p></div>
+    {% endif %}
+
+    <div class="results-actions">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Upload More</a>
+        <a href="{{ url_for('documents') }}" class="btn btn-primary">Browse All Documents</a>
+        <a href="{{ url_for('analytics') }}" class="btn btn-success">View Analytics</a>
+    </div>
+</div>
+{% endblock %}

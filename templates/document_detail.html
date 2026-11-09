@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Document Inspection - Atlas Finance{% endblock %}
+
+{% block content %}
+<div class="results-page">
+    {% if error %}
+    <div class="error-messages"><h3>{{ error }}</h3></div>
+    {% else %}
+    {% set doc = bundle.document %}
+
+    <div class="results-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2>{{ doc.filename }}</h2>
+            <p>
+                <span class="document-type-pill">{{ doc.document_type|replace('_', ' ')|title }}</span>
+                <span class="badge" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; margin-left: 0.5rem;">🔒 Encrypted at Rest (AES-256)</span>
+                | Uploaded: {{ doc.upload_date }}
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('download_document_route', document_id=doc.id, download=1) }}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <span>📥</span> Download Original PDF
+            </a>
+        </div>
+    </div>
+
+    {% if doc.document_type == 'bank_statement' %}
+    <div class="structured-panel">
+        <div class="text-header"><h4>Bank Statement Summary</h4></div>
+        <div class="structured-grid">
+            <div class="field-card"><span class="field-label">Bank</span><span class="field-value">{{ doc.bank_name or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Account Holder</span><span class="field-value">{{ doc.account_holder or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Account Number</span><span class="field-value">{{ doc.account_number or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Statement Period</span><span class="field-value">{{ doc.statement_start_date or 'N/A' }} to {{ doc.statement_end_date or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Closing Balance</span><span class="field-value">{% if doc.closing_balance %}₹{{ "{:,.2f}".format(doc.closing_balance) }}{% else %}N/A{% endif %}</span></div>
+        </div>
+
+        <div class="text-header" style="margin-top: 1.5rem;"><h4>Extracted Transactions ({{ bundle.transactions|length }})</h4></div>
+        {% if bundle.transactions %}
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in bundle.transactions %}
+                    <tr>
+                        <td>{{ tx.transaction_date or '-' }}</td>
+                        <td>{{ tx.description or '-' }}</td>
+                        <td><span class="badge">{{ tx.category }}</span></td>
+                        <td style="color: #dc2626;">{% if tx.debit %}₹{{ "{:,.2f}".format(tx.debit) }}{% else %}-{% endif %}</td>
+                        <td style="color: #16a34a;">{% if tx.credit %}₹{{ "{:,.2f}".format(tx.credit) }}{% else %}-{% endif %}</td>
+                        <td>{% if tx.balance %}₹{{ "{:,.2f}".format(tx.balance) }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>No transactions extracted.</p>
+        {% endif %}
+    </div>
+
+    {% elif doc.document_type == 'invoice' and bundle.invoice %}
+    {% set inv = bundle.invoice %}
+    <div class="structured-panel">
+        <div class="text-header"><h4>Invoice Header</h4></div>
+        <div class="structured-grid">
+            <div class="field-card"><span class="field-label">Invoice Number</span><span class="field-value">{{ inv.invoice_number or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Vendor Name</span><span class="field-value">{{ inv.vendor_name or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Customer Name</span><span class="field-value">{{ inv.customer_name or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Invoice Date</span><span class="field-value">{{ inv.invoice_date or 'N/A' }}</span></div>
+            <div class="field-card"><span class="field-label">Due Date</span><span class="field-value">{{ inv.due_date or 'N/A' }}</span></div>
+            <div class="field-card total-field"><span class="field-label">Total Amount</span><span class="field-value">₹{{ "{:,.2f}".format(inv.total_amount) }}</span></div>
+        </div>
+
+        <div class="text-header" style="margin-top: 1.5rem;"><h4>Line Items ({{ bundle.invoice_items|length }})</h4></div>
+        {% if bundle.invoice_items %}
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Item / Description</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr>
+                </thead>
+                <tbody>
+                    {% for item in bundle.invoice_items %}
+                    <tr>
+                        <td>{{ item.product_or_service }}</td>
+                        <td>{{ item.quantity or 1 }}</td>
+                        <td>₹{{ "{:,.2f}".format(item.unit_price) }}</td>
+                        <td>₹{{ "{:,.2f}".format(item.line_total) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Audit Trail -->
+    {% if doc.extracted_text %}
+    <details class="raw-text-details">
+        <summary>View Raw Extracted Text (Audit Trail) ▼</summary>
+        <div class="raw-text-content"><pre>{{ doc.extracted_text }}</pre></div>
+    </details>
+    {% endif %}
+
+    <div class="results-actions">
+        <a href="{{ url_for('documents') }}" class="btn btn-secondary">Back to Documents</a>
+        <a href="{{ url_for('analytics') }}" class="btn btn-primary">Go to Analytics</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
